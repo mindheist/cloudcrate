@@ -83,19 +83,34 @@ if task == 'sync' :
 	print "======================================"
 
 	print "====== Syncing Current Directory ====="
+	print "======================================"
 	path = os.path.dirname(os.path.realpath('cloudcrate.py')) + '/'
 	
-	list_of_files = {}
+	list_of_files = []
 
-	for (path,dirs,list_of_files) in os.walk(path):
-		#print list_of_files
-		break
+
+	for (path,dirs,l_of_f) in os.walk(path):
+		for name in l_of_f:
+			full_name = (os.path.join(path,name))
+			#print "file fullname = ",  full_name
+			list_of_files.append(full_name)
+    	for name in dirs:
+        	full_name = (os.path.join(path,name))
+        	print "dir fullname =" ,full_name
+        	#list_of_files.extend[full_name]
+        	list_of_files.append(full_name)
+		
+	#print "======================================"
+	#print "===== SOME LIST ======================"
+	#print "======================================"
+
+	#print list_of_files
 
 	print "======================================"
 	print "===== LIST OF FILES IN DIRECTORY======"
 	print "======================================"
 
-	print type(list_of_files)
+	print "the list object returned above is " , type(list_of_files)
 
 	try:
 		print "in try block - this would handle a resyn operation"
@@ -103,7 +118,7 @@ if task == 'sync' :
 		last_modified_dict = json.load(open("last_modified.txt"))
 
 		for files in list_of_files:
-			if not files.startswith('.'):
+			#if not files.startswith('.'):
 				#print 'Working on file ' ,files
 
 				if (files not in last_modified_dict):
@@ -111,7 +126,9 @@ if task == 'sync' :
 					#print "Missing file Added to dictionary is ", files
 					print "uploading ..from try block if" , files
 					k = Key(bucket)
+
 					k.key = files
+					print k.key
 					k.set_contents_from_filename(path+files)
 					json.dump(last_modified_dict, open("last_modified.txt",'w'))
 
@@ -120,6 +137,7 @@ if task == 'sync' :
 					print "uploading ..from try block elif" , files
 					k = Key(bucket)
 					k.key = files
+					print "Dummy",k.key
 					k.set_contents_from_filename(path+files)
 					json.dump(last_modified_dict, open("last_modified.txt",'w'))
 				
@@ -131,19 +149,21 @@ if task == 'sync' :
 
 	except IOError: 
 
-		print "in exception block"
+		print "In IO exception block - There was no last_modified.txt file"
 		last_modified_dict = defaultdict()
 		for files in list_of_files:
+			print "files = " , files
+			#print "list of files = " , list_of_files
 			last_modified_dict[files]= os.path.getmtime(files)
 		print last_modified_dict
 		json.dump(last_modified_dict, open("last_modified.txt",'w'))
 
 		for files in list_of_files:
-		   	if not files.startswith('.'):
-				print 'uploading file from IOError Exception' ,files
-				k = Key(bucket)
-				k.key = files
-				k.set_contents_from_filename(path+files)
+		   	#if not files.startswith('.'):
+			print 'uploading file from IOError Exception' ,files
+			k = Key(bucket)
+			k.key = files
+			k.set_contents_from_filename(files)
 
 	bucket.set_acl('public-read')
 
