@@ -87,6 +87,8 @@ if task == 'sync' :
 	path = os.path.dirname(os.path.realpath('cloudcrate.py')) + '/'
 	
 	list_of_files = []
+	creation_time_dict = defaultdict()
+
 
 
 	for (path,dirs,l_of_f) in os.walk(path):
@@ -99,6 +101,11 @@ if task == 'sync' :
         	print "dir fullname =" ,full_name
         	#list_of_files.extend[full_name]
         	list_of_files.append(full_name)
+
+	for files in list_of_files:
+		creation_time_dict[files]= time.ctime(os.path.getctime(files))[-4:]
+	print creation_time_dict
+	json.dump(creation_time_dict, open("creation_time.txt",'w'))
 		
 	#print "======================================"
 	#print "===== SOME LIST ======================"
@@ -190,6 +197,8 @@ if task == 'download' :
 	#os.mkdir('~/Desktop/downloaded/')
 
 	file_types_list =[]
+	creation_time_dict = json.load(creation_time_dict,open("creation_time.txt",'r'))
+
 
 	if not os.path.exists(os.path.expanduser('~/Desktop/s3_downloads')):
 		print "===================================================="
