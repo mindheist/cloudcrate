@@ -76,9 +76,9 @@ if task == 'sync' :
 	from time import mktime
 	from datetime import datetime
 
-	print "Established connection to AWS S3"
+	print "Establish connection to AWS S3"
 
-	conn = S3Connection('AKIAJ332D5S6IQ7WITSQ', 'G2WNp8xGxQPSxEcurBOTI32okS/izRmz2KPAJO24')
+	conn = S3Connection('AKIAJHAZH5AVPWXOI4ZA', 'PG8BmISNsLWFN/8dZ8jBckmqU/Jq8nFJFVEORswL')
 	bucket = conn.create_bucket('cloudcrate.hari')
 	print "======================================"
 
@@ -119,35 +119,37 @@ if task == 'sync' :
 
 		for files in list_of_files:
 			#if not files.startswith('.'):
-				#print 'Working on file ' ,files
+			#print 'Working on file ' ,files
 
-				if (files not in last_modified_dict):
-					last_modified_dict[files] = os.path.getmtime(files)
-					#print "Missing file Added to dictionary is ", files
-					print "uploading ..from try block if" , files
-					k = Key(bucket)
+			if (files not in last_modified_dict):
+				last_modified_dict[files] = os.path.getmtime(files)
+				#print "Missing file Added to dictionary is ", files
+				print "uploading ..from try block if" , files
+				k = Key(bucket)
+				head, tail = os.path.split(files)
+				k.key = tail
+				#print "The key is " , k.key
+				k.set_contents_from_filename(files)
+				json.dump(last_modified_dict, open("last_modified.txt",'w'))
 
-					k.key = files
-					print k.key
-					k.set_contents_from_filename(path+files)
-					json.dump(last_modified_dict, open("last_modified.txt",'w'))
-
-				elif (files in last_modified_dict) & (os.path.getmtime(files) > last_modified_dict[files]) :
-					last_modified_dict[files] = os.path.getmtime(files)
-					print "uploading ..from try block elif" , files
-					k = Key(bucket)
-					k.key = files
-					print "Dummy",k.key
-					k.set_contents_from_filename(path+files)
-					json.dump(last_modified_dict, open("last_modified.txt",'w'))
+			elif (files in last_modified_dict) & (os.path.getmtime(files) > last_modified_dict[files]) :
+				last_modified_dict[files] = os.path.getmtime(files)
+				print "uploading ..from try block elif" , files
+				k = Key(bucket)
+				head, tail = os.path.split(files)
+				k.key = tail
+				print "The key is " , k.key
+				k.set_contents_from_filename(files)
+				json.dump(last_modified_dict, open("last_modified.txt",'w'))
 				
-				else :
-					print "skipping file from try block else ",files
-
+			else :
+				print "skipping file from try block else ",files
 
 		bucket.set_acl('public-read')
 
-	except IOError: 
+	except IOError as e : 
+
+		print e
 
 		print "In IO exception block - There was no last_modified.txt file"
 		last_modified_dict = defaultdict()
@@ -162,7 +164,10 @@ if task == 'sync' :
 		   	#if not files.startswith('.'):
 			print 'uploading file from IOError Exception' ,files
 			k = Key(bucket)
-			k.key = files
+			#k.key = files
+			head, tail = os.path.split(files)
+			k.key = tail
+			print "The key is " , k.key
 			k.set_contents_from_filename(files)
 
 	bucket.set_acl('public-read')
@@ -179,9 +184,12 @@ if task == 'download' :
 	from boto.s3.key import Key
 
 	download_last_modified_dict = {}
-	conn = S3Connection('AKIAJ332D5S6IQ7WITSQ', 'G2WNp8xGxQPSxEcurBOTI32okS/izRmz2KPAJO24')
+	#conn = S3Connection('AKIAJ332D5S6IQ7WITSQ', 'G2WNp8xGxQPSxEcurBOTI32okS/izRmz2KPAJO24')
+	conn = S3Connection('AKIAJHAZH5AVPWXOI4ZA', 'PG8BmISNsLWFN/8dZ8jBckmqU/Jq8nFJFVEORswL')
 	bucket = conn.get_bucket('cloudcrate.hari')
 	#os.mkdir('~/Desktop/downloaded/')
+
+	file_types_list =[]
 
 	if not os.path.exists(os.path.expanduser('~/Desktop/s3_downloads')):
 		print "===================================================="
@@ -191,45 +199,76 @@ if task == 'download' :
 		print "Created a folder of name s3_downloads on your Desktop"
 		print "===================================================="
 		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
+
+		# for key in bucket.list():
+		# 		download_last_modified_dict[key.name]= key.last_modified
+		# 		#print key.name
+				
+		# 		#fileName, fileExtension = os.path.splitext(key.name)
+		# 		#print "file extension ==", fileExtension ,"file Name==" , fileName
+		# 		#print key.last_modified
+		# 		#print fileExtension[1:]
+
+		# 			try :
+		# 				if not os.path.exists(fileExtension[1:]):
+
+		# 			#print "inside loop that makes Directory based on fileEXT"
+		# 					#os.makedirs(fileExtension[1:])
+		# 					downloaded_file = key.get_contents_to_filename(key.name)
+		# 					print "Downloaded file from the if code block" , key.name
+		# 			except OSError as e:
+		# 				continue
+		# 				#os.chdir(fileExtension[1:])
+		# 				downloaded_file = key.get_contents_to_filename(key.name)
+		# 				print "Downloaded file from the if code block" , key.name
+		
+
 		for key in bucket.list():
 				download_last_modified_dict[key.name]= key.last_modified
 				downloaded_file = key.get_contents_to_filename(key.name)
 				#print key.last_modified
 				print "Downloaded file " , key.name
+
+
+				
 		#print download_last_modified_dict
 		json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
 
 	else:
 
-			print "============================================================================================="
-			print "the s3_downloads folder already exists , will now selectively download files into this folder"
-			print "============================================================================================="
+		print "============================================================================================="
+		print "the s3_downloads folder already exists , will now selectively download files into this folder"
+		print "============================================================================================="
 
-			os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
-			download_last_modified_dict = json.load(open("download_last_modified.txt"))
-			print "loaded json from file into memory and it looks like below"
-			# for key in download_last_modified_dict:
-			# 	print download_last_modified_dict[key]
+		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
+		download_last_modified_dict = json.load(open("download_last_modified.txt"))
+		print "loaded json from file into memory and it looks like below"
+		
+		# for key in download_last_modified_dict:
+		# 	print download_last_modified_dict[key]
 
-			# print type(bucket.list())
-			# for key in bucket.list():
-			# 	#print type(key)
-			# 	print key.name, key.last_modified , download_last_modified_dict[key.name]
+		# print type(bucket.list())
+		# for key in bucket.list():
+		# 	#print type(key)
+		# 	print key.name, key.last_modified , download_last_modified_dict[key.name]
 
+		#try:
+		for key in bucket.list():
 			try:
-				for key in bucket.list():
-					if key.last_modified > download_last_modified_dict[key.name]:
-						#print "from S3 " ,key.last_modified ,"from file", download_last_modified_dict[key.name]
-						print "Downloading file based on timestamp comparison",key.name
-						download_last_modified_dict[key.name]= key.last_modified
-						downloaded_file = key.get_contents_to_filename(key.name)			
-					else:
-						#print "Skipping download of file",key.name , "last updated time that I just read from S3",key.last_modified
-						print "Skipping download of file",key.name
-				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
-			except KeyError:
-				#print "KeyError" , key.name
+				if key.last_modified > download_last_modified_dict[key.name]:
+					#print "from S3 " ,key.last_modified ,"from file", download_last_modified_dict[key.name]
+					print "Downloading file based on timestamp comparison",key.name
+					download_last_modified_dict[key.name]= key.last_modified
 					downloaded_file = key.get_contents_to_filename(key.name)
-					print "Downloaded in the KeyError code block",key.name
-					download_last_modified_dict[key.name]=key.last_modified
-					json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+				else:
+					#print "Skipping download of file",key.name , "last updated time that I just read from S3",key.last_modified
+					print "Skipping download of file",key.name
+				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+			except KeyError as e :
+				#print e
+				#print "KeyError" , key.name
+				downloaded_file = key.get_contents_to_filename(key.name)
+				print "Downloaded in the KeyError code block",key.name
+				download_last_modified_dict[key.name]=key.last_modified
+				#fileName, fileExtension = os.path.splitext(downloaded_file)
+				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
