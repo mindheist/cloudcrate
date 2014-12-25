@@ -75,6 +75,10 @@ if task == 'sync' :
 	import time
 	from time import mktime
 	from datetime import datetime
+	from subprocess import call
+	import os
+	import subprocess
+
 
 	print "Establish connection to AWS S3"
 
@@ -87,7 +91,7 @@ if task == 'sync' :
 	path = os.path.dirname(os.path.realpath('cloudcrate.py')) + '/'
 	
 	list_of_files = []
-	creation_time_dict = defaultdict()
+	creation_time_dict = {}
 
 
 
@@ -102,9 +106,18 @@ if task == 'sync' :
         	#list_of_files.extend[full_name]
         	list_of_files.append(full_name)
 
+	print "==========================================="
+	print "====== The creation time of the files ====="
+	print "==========================================="
+	
 	for files in list_of_files:
-		creation_time_dict[files]= time.ctime(os.path.getctime(files))[-4:]
+		command_to_run = str("mdls -name kMDItemFSCreationDate") + " " + files
+		process = subprocess.Popen(command_to_run.split(), stdout = subprocess.PIPE)
+		output = process.communicate()[0]
+		creation_time_dict[files] = str(output)[24:28]
+
 	print creation_time_dict
+	
 	json.dump(creation_time_dict, open("creation_time.txt",'w'))
 		
 	#print "======================================"
@@ -197,7 +210,8 @@ if task == 'download' :
 	#os.mkdir('~/Desktop/downloaded/')
 
 	file_types_list =[]
-	creation_time_dict = json.load(creation_time_dict,open("creation_time.txt",'r'))
+	creation_time_dict = {}
+	creation_time_dict = json.load(open("creation_time.txt"))
 
 
 	if not os.path.exists(os.path.expanduser('~/Desktop/s3_downloads')):
@@ -207,6 +221,9 @@ if task == 'download' :
 		os.mkdir(os.path.expanduser('~/Desktop/s3_downloads/'))
 		print "Created a folder of name s3_downloads on your Desktop"
 		print "===================================================="
+		print set(creation_time_dict.values())
+		print "===================================================="
+
 		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
 
 		# for key in bucket.list():
@@ -233,10 +250,11 @@ if task == 'download' :
 		
 
 		for key in bucket.list():
+				#print creation_time_dict[key.name]
 				download_last_modified_dict[key.name]= key.last_modified
 				downloaded_file = key.get_contents_to_filename(key.name)
 				#print key.last_modified
-				print "Downloaded file " , key.name
+				print "Downloaded file from fresh download code block " , key.name
 
 
 				
@@ -251,7 +269,7 @@ if task == 'download' :
 
 		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
 		download_last_modified_dict = json.load(open("download_last_modified.txt"))
-		print "loaded json from file into memory and it looks like below"
+		print "loaded json from file into memory and it looks like below", download_last_modified_dict
 		
 		# for key in download_last_modified_dict:
 		# 	print download_last_modified_dict[key]
@@ -281,3 +299,7 @@ if task == 'download' :
 				download_last_modified_dict[key.name]=key.last_modified
 				#fileName, fileExtension = os.path.splitext(downloaded_file)
 				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+
+	print set(creation_time_dict.values())
+
+	print "End of Download"		
