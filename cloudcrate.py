@@ -93,8 +93,6 @@ if task == 'sync' :
 	list_of_files = []
 	creation_time_dict = {}
 
-
-
 	for (path,dirs,l_of_f) in os.walk(path):
 		for name in l_of_f:
 			full_name = (os.path.join(path,name))
@@ -114,7 +112,8 @@ if task == 'sync' :
 		command_to_run = str("mdls -name kMDItemFSCreationDate") + " " + files
 		process = subprocess.Popen(command_to_run.split(), stdout = subprocess.PIPE)
 		output = process.communicate()[0]
-		creation_time_dict[files] = str(output)[24:28]
+		head, tail = os.path.split(files)
+		creation_time_dict[tail] = str(output)[24:28]
 
 	print creation_time_dict
 	
@@ -204,14 +203,23 @@ if task == 'download' :
 	from boto.s3.key import Key
 
 	download_last_modified_dict = {}
-	#conn = S3Connection('AKIAJ332D5S6IQ7WITSQ', 'G2WNp8xGxQPSxEcurBOTI32okS/izRmz2KPAJO24')
+	path = os.path.dirname(os.path.realpath('cloudcrate.py')) + '/'
+
+	print "Establishing connection to AWS"
 	conn = S3Connection('AKIAJHAZH5AVPWXOI4ZA', 'PG8BmISNsLWFN/8dZ8jBckmqU/Jq8nFJFVEORswL')
+	print "Connected,Getting bucket"
+
 	bucket = conn.get_bucket('cloudcrate.hari')
 	#os.mkdir('~/Desktop/downloaded/')
 
 	file_types_list =[]
 	creation_time_dict = {}
+	print " ==== Loading the json from the disk to memory =="
 	creation_time_dict = json.load(open("creation_time.txt"))
+	print "==========creation time dict looks as below ====="
+	for k,v in creation_time_dict.items():
+		print k,v
+	print "================================================="
 
 
 	if not os.path.exists(os.path.expanduser('~/Desktop/s3_downloads')):
@@ -221,10 +229,13 @@ if task == 'download' :
 		os.mkdir(os.path.expanduser('~/Desktop/s3_downloads/'))
 		print "Created a folder of name s3_downloads on your Desktop"
 		print "===================================================="
-		print set(creation_time_dict.values())
+		print "======= Creating the following local folders ======="
+		set_directories = set(creation_time_dict.values())
+		print set_directories
 		print "===================================================="
-
-		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
+		for items in set_directories:
+			os.mkdir(os.path.expanduser('~/Desktop/s3_downloads/'+items))
+			print "Created local folder of name ", items
 
 		# for key in bucket.list():
 		# 		download_last_modified_dict[key.name]= key.last_modified
@@ -250,16 +261,23 @@ if task == 'download' :
 		
 
 		for key in bucket.list():
+				print "inside the download loop "
 				#print creation_time_dict[key.name]
 				download_last_modified_dict[key.name]= key.last_modified
-				downloaded_file = key.get_contents_to_filename(key.name)
+				print "Added a key to the last modified dictionary ==",key.last_modified
+				#key.name = path + key.name
+				print "Debug Message :", creation_time_dict[key.name]
+				if creation_time_dict[key.name] in set_directories:
+					os.chdir("/Users/Hari/Desktop/s3_downloads/" + creation_time_dict[key.name])	
+					downloaded_file = key.get_contents_to_filename(key.name)
 				#print key.last_modified
 				print "Downloaded file from fresh download code block " , key.name
 
-
-				
+	
 		#print download_last_modified_dict
 		json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+		print set(creation_time_dict.values())
+		print "End of Download"	
 
 	else:
 
@@ -278,6 +296,7 @@ if task == 'download' :
 		# for key in bucket.list():
 		# 	#print type(key)
 		# 	print key.name, key.last_modified , download_last_modified_dict[key.name]
+
 
 		#try:
 		for key in bucket.list():
@@ -300,6 +319,5 @@ if task == 'download' :
 				#fileName, fileExtension = os.path.splitext(downloaded_file)
 				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
 
-	print set(creation_time_dict.values())
-
-	print "End of Download"		
+		print set(creation_time_dict.values())
+		print "End of Download"	
