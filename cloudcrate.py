@@ -39,6 +39,15 @@ except IndexError:
 	print "Enter one of the above command line arguments "
 	sys.exit(1)
 
+#==========================================================================================================================
+# this is the first option in the Available tasks list . If the host does not have boto installed on it , this part of the 
+# code , goes ahead and installs boto . This is an expected scenario , most of the hosts will not have boto 
+# Also , I inititally had a weblink and thought of downloading from there 
+# Hiccup # 1 : I discovered wget is not default on OSX.
+# Hiccup # 2 : Was running into firewall issues , when trying to download from begind the wall.
+# The solution was to bundle all of the required libraries (ie) boto files for download and then install it locally.
+#==========================================================================================================================
+
 if task == 'setup' :
 	try:
 		import boto
@@ -67,7 +76,6 @@ if task == 'setup' :
 		print "=================================================================================="
 
 if task == 'sync' :
-
 
 	from boto.s3.connection import S3Connection
 	from boto.s3.key import Key
@@ -288,6 +296,8 @@ if task == 'download' :
 		os.chdir(os.path.expanduser('~/Desktop/s3_downloads'))
 		download_last_modified_dict = json.load(open("download_last_modified.txt"))
 		print "loaded json from file into memory and it looks like below", download_last_modified_dict
+		set_directories = set(creation_time_dict.values())
+
 		
 		# for key in download_last_modified_dict:
 		# 	print download_last_modified_dict[key]
@@ -303,19 +313,27 @@ if task == 'download' :
 			try:
 				if key.last_modified > download_last_modified_dict[key.name]:
 					#print "from S3 " ,key.last_modified ,"from file", download_last_modified_dict[key.name]
-					print "Downloading file based on timestamp comparison",key.name
 					download_last_modified_dict[key.name]= key.last_modified
-					downloaded_file = key.get_contents_to_filename(key.name)
+					if creation_time_dict[key.name] in set_directories:
+						os.chdir("/Users/Hari/Desktop/s3_downloads/" + creation_time_dict[key.name])	
+						downloaded_file = key.get_contents_to_filename(key.name)
+						print "Downloading file based on timestamp comparison",key.name
+						json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+					#downloaded_file = key.get_contents_to_filename(key.name)
 				else:
 					#print "Skipping download of file",key.name , "last updated time that I just read from S3",key.last_modified
 					print "Skipping download of file",key.name
-				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
+					json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
 			except KeyError as e :
 				#print e
 				#print "KeyError" , key.name
-				downloaded_file = key.get_contents_to_filename(key.name)
-				print "Downloaded in the KeyError code block",key.name
 				download_last_modified_dict[key.name]=key.last_modified
+				#downloaded_file = key.get_contents_to_filename(key.name)
+				if creation_time_dict[key.name] in set_directories:
+						os.chdir("/Users/Hari/Desktop/s3_downloads/" + creation_time_dict[key.name])	
+						downloaded_file = key.get_contents_to_filename(key.name)
+						print "Downloading file based on timestamp comparison",key.name
+				#print "Downloaded in the KeyError code block",key.name
 				#fileName, fileExtension = os.path.splitext(downloaded_file)
 				json.dump(download_last_modified_dict, open("download_last_modified.txt",'w'))
 
