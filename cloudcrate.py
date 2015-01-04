@@ -84,7 +84,6 @@ if task == 'sync' :
 	from time import mktime
 	from datetime import datetime
 	from subprocess import call
-	import os
 	import subprocess
 
 
